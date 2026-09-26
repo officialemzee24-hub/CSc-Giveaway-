@@ -13,9 +13,9 @@
 </head>
 <body>
 
-<div id="authGate" class="auth-gate">Checking admin access…</div>
+<div id="authGate" class="auth-gate" hidden>Checking admin access…</div>
 
-<div id="dashboard" hidden>
+<div id="dashboard">
 
 <header class="dash-header">
   <div class="dash-header-inner">
@@ -123,20 +123,19 @@
     <div class="table-scroll">
       <table class="reg-table" id="regTable">
         <thead>
-  <tr>
-    <th>Full name</th>
-    <th>Matric number</th>
-    <th>Email</th>
-    <th>Phone</th>
-    <th>Level</th>
-    <th>Status</th>
-    <th>Eligibility</th>
-    <th>Account details</th>
-    <th>Registered</th>
-    <th>Action</th>
-  </tr>
-</thead>
-
+          <tr>
+            <th>Full name</th>
+            <th>Matric number</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Level</th>
+            <th>Status</th>
+            <th>Eligibility</th>
+            <th>Account details</th>
+            <th>Registered</th>
+            <th>Action</th>
+          </tr>
+        </thead>
         <tbody id="regTableBody"></tbody>
       </table>
     </div>
@@ -164,6 +163,6 @@
   </div>
 </div>
 
-<script type="module" src="admin-dashboard.js"></script>
+<script type="module" src="admin-dashboard.js?v=4"></script>
 </body>
 </html>
