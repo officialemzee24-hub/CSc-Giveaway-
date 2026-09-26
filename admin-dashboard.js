@@ -17,24 +17,20 @@ import {
 const authGate = document.getElementById("authGate");
 const dashboard = document.getElementById("dashboard");
 
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "admin.html";
     return;
   }
+
   try {
-    const adminSnap = await getDoc(doc(db, "admins", user.uid));
-    if (!adminSnap.exists() || adminSnap.data().role !== "admin") {
-      await signOut(auth);
-      window.location.href = "admin.html";
-      return;
-    }
     document.getElementById("adminEmail").textContent = user.email;
     authGate.hidden = true;
     dashboard.hidden = false;
     initDashboard();
   } catch (err) {
-    authGate.textContent = "Could not verify admin access. Please sign in again.";
+    console.error("Dashboard initialization error:", err);
+    authGate.textContent = "Error loading dashboard data. Please refresh.";
   }
 });
 
