@@ -2,7 +2,7 @@
 
 import { auth, db } from "./firebase-config.js";
 import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const form = document.getElementById("loginForm");
 const btn = document.getElementById("loginBtn");
