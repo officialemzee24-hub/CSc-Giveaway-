@@ -628,6 +628,18 @@ html, body, #dashboard, .dash-main, .panel {
     transform: translateY(0) scale(1);
   }
 }
+#authGate {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+#dashboard {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
 
 
 
