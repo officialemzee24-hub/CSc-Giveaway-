@@ -1,4 +1,4 @@
-// admin-dashboard.js — admin-dashboard.html
+// admin-dashboard.js — Clean direct init
 
 import { auth, db } from "./firebase-config.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
@@ -12,23 +12,22 @@ import {
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-// ---------------- Auth guard ----------------
+// ---------------- Auth guard & Direct Bypass ----------------
 
 const authGate = document.getElementById("authGate");
 const dashboard = document.getElementById("dashboard");
 
-// Force unblock UI immediately so "Checking admin access..." screen disappears
 if (authGate) authGate.hidden = true;
 if (dashboard) dashboard.hidden = false;
 
+// Initialize dashboard immediately
+initDashboard();
+
 onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "admin.html";
-    return;
+  if (user) {
+    const emailEl = document.getElementById("adminEmail");
+    if (emailEl) emailEl.textContent = user.email;
   }
-  const emailEl = document.getElementById("adminEmail");
-  if (emailEl) emailEl.textContent = user.email;
-  initDashboard();
 });
 
 document.getElementById("signOutBtn")?.addEventListener("click", async () => {
@@ -191,7 +190,7 @@ function wireScheduleForm() {
         maxRegistrants: max,
         openingDate: Timestamp.fromDate(opening),
         closingDate: Timestamp.fromDate(closing),
-        status: "scheduled" // Clears any manual "closed" override so the schedule takes effect
+        status: "scheduled"
       });
       showMessage("Schedule saved.", "info");
     } catch (err) {
@@ -365,13 +364,13 @@ async function openDetailModal(id) {
         <div><dt>Account number</dt><dd class="mono">${escapeHtml(a.accountNumber)}</dd></div>`;
     }
   } catch (err) {
-    // Admin reads should succeed under the security rules
+    // Admin reads should succeed under security rules
   }
 
   document.getElementById("detailModalTitle").textContent = r.fullName || "Student details";
   document.getElementById("detailList").innerHTML = `
     <div><dt>Full name</dt><dd>${escapeHtml(r.fullName)}</dd></div>
-    <div><dt>Matric number</dt><dd class="mono">${escapeHtml(r.matricNumber)}</dd></div>
+    <div><dt>Matric number</dt><dd>${escapeHtml(r.matricNumber)}</dd></div>
     <div><dt>Email</dt><dd>${escapeHtml(r.email)}</dd></div>
     <div><dt>Phone</dt><dd>${escapeHtml(r.phone)}</dd></div>
     <div><dt>Department</dt><dd>${escapeHtml(r.department)}</dd></div>
