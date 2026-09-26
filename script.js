@@ -1,7 +1,7 @@
 // script.js - student landing + registration
 
 import { firebaseConfig, db } from "./firebase-config.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
   inMemoryPersistence,
