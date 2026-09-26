@@ -1,0 +1,23 @@
+/* account.css — extends style.css for account.html */
+
+.account-wrap {
+  padding: 56px 24px 80px;
+  max-width: 560px;
+}
+.account-panel {
+  animation: rise 0.35s ease-out both;
+}
+.account-panel .section-title {
+  border-left: 3px solid var(--gold);
+  padding-left: 14px;
+}
+#detailsMatricLabel {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  color: var(--green-deep);
+  background: var(--gold-soft);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}

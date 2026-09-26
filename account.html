@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Submit Account Details — Departmental Giveaway 2026</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="account.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">CS</span>
+      <div class="brand-text">
+        <span class="brand-dept">Computer Science Department</span>
+        <span class="brand-event">Account Details Submission</span>
+      </div>
+    </div>
+    <a href="index.html" class="btn btn-ghost">Back to giveaway</a>
+  </div>
+</header>
+
+<main class="wrap account-wrap">
+
+  <!-- STEP 1: verify matric number -->
+  <section class="account-panel" id="lookupPanel">
+    <h1 class="section-title">Verify your registration</h1>
+    <p class="section-lead">Enter your matric number to check your eligibility. If you're marked eligible and haven't submitted account details yet, you'll be able to continue.</p>
+
+    <form class="reg-form" id="lookupForm" novalidate>
+      <div class="field">
+        <label for="lookupMatric">Matric number</label>
+        <input type="text" id="lookupMatric" class="mono-input" placeholder="e.g. CSC/24/001" required />
+      </div>
+      <p class="form-message" id="lookupMessage" role="alert" aria-live="assertive"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="lookupBtn">
+        <span class="btn-label">Check eligibility</span>
+      </button>
+    </form>
+  </section>
+
+  <!-- STEP 2: account details form (hidden until eligible + unsubmitted) -->
+  <section class="account-panel" id="detailsPanel" hidden>
+    <h1 class="section-title">Submit account details</h1>
+    <p class="section-lead">
+      These details are used only to process your giveaway payout. They are stored securely
+      and cannot be viewed by other students. <strong id="detailsMatricLabel"></strong>
+    </p>
+
+    <form class="reg-form" id="detailsForm" novalidate>
+      <div class="field">
+        <label for="bankName">Bank name</label>
+        <input type="text" id="bankName" required />
+      </div>
+      <div class="field">
+        <label for="accountName">Account name</label>
+        <input type="text" id="accountName" required />
+      </div>
+      <div class="field">
+        <label for="accountNumber">Account number</label>
+        <input type="text" id="accountNumber" class="mono-input" inputmode="numeric" maxlength="10" placeholder="10 digits" required />
+      </div>
+      <p class="form-message" id="detailsMessage" role="alert" aria-live="assertive"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="detailsBtn">
+        <span class="btn-label">Submit account details</span>
+      </button>
+    </form>
+  </section>
+
+  <!-- STATE: submission successful -->
+  <section class="account-panel" id="successPanel" hidden>
+    <div style="text-align: center; padding: 1rem 0;">
+      <div style="width: 56px; height: 56px; background: rgba(34, 197, 94, 0.15); color: #22c55e; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h1 class="section-title">Details Submitted Successfully!</h1>
+      <p class="section-lead" style="margin-bottom: 1.5rem;">Your account details have been recorded securely. You are all set for the giveaway payout.</p>
+      <a href="index.html" class="btn btn-primary btn-block">Back to Giveaway Home</a>
+    </div>
+  </section>
+
+  <!-- STATE: already submitted (for subsequent lookup checks) -->
+  <section class="account-panel" id="alreadyPanel" hidden>
+    <h1 class="section-title">Already submitted</h1>
+    <p>Account details have already been recorded for this matric number. If you believe this is an error, contact the department directly.</p>
+  </section>
+
+  <!-- STATE: not eligible -->
+  <section class="account-panel" id="notEligiblePanel" hidden>
+    <h1 class="section-title">Not eligible yet</h1>
+    <p>This matric number is registered but has not been marked eligible. Please check back after the department completes eligibility review.</p>
+  </section>
+
+</main>
+
+<script type="module" src="account.js"></script>
+</body>
+</html>
