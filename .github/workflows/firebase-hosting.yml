@@ -1,0 +1,22 @@
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccountId: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CS_GIVEAWAY }}'
+          channelId: live
+          projectId: giveaway-84ec1
+          
