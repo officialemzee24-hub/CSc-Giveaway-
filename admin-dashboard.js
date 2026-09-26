@@ -17,22 +17,25 @@ import {
 const authGate = document.getElementById("authGate");
 const dashboard = document.getElementById("dashboard");
 
+// Force unblock UI immediately
+if (authGate) authGate.hidden = true;
+if (dashboard) dashboard.hidden = false;
+
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "admin.html";
     return;
   }
-
-  try {
-    document.getElementById("adminEmail").textContent = user.email;
-    authGate.hidden = true;
-    dashboard.hidden = false;
-    initDashboard();
-  } catch (err) {
-    console.error("Dashboard initialization error:", err);
-    authGate.textContent = "Error loading dashboard data. Please refresh.";
-  }
+  const emailEl = document.getElementById("adminEmail");
+  if (emailEl) emailEl.textContent = user.email;
+  initDashboard();
 });
+
+document.getElementById("signOutBtn")?.addEventListener("click", async () => {
+  await signOut(auth);
+  window.location.href = "admin.html";
+});
+
 
 document.getElementById("signOutBtn").addEventListener("click", async () => {
   await signOut(auth);
