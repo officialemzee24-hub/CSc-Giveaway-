@@ -10,15 +10,23 @@ import {
   collection,
   getDocs,
   Timestamp,
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ---------------- Auth guard & Direct Bypass ----------------
 
-const authGate = document.getElementById("authGate");
-const dashboard = document.getElementById("dashboard");
+function revealDashboard() {
+  const authGate = document.getElementById("authGate");
+  const dashboard = document.getElementById("dashboard");
 
-if (authGate) authGate.hidden = true;
-if (dashboard) dashboard.hidden = false;
+  if (authGate) authGate.hidden = true;
+  if (dashboard) dashboard.hidden = false;
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", revealDashboard);
+} else {
+  revealDashboard();
+}
 
 // Initialize dashboard immediately
 initDashboard();
@@ -126,7 +134,9 @@ function renderScheduleSummary() {
   const remainingEl = document.getElementById("summaryRemaining");
 
   if (!schedule) {
-    [statusEl, openingEl, closingEl, capacityEl, registeredEl, remainingEl].forEach((el) => (el.textContent = "Not set"));
+    [statusEl, openingEl, closingEl, capacityEl, registeredEl, remainingEl].forEach((el) => {
+      if (el) el.textContent = "Not set";
+    });
     return;
   }
 
@@ -143,17 +153,21 @@ function renderScheduleSummary() {
     else if (count >= max && max > 0) derivedStatus = "Full";
   }
 
-  statusEl.textContent = derivedStatus;
-  openingEl.textContent = opening ? opening.toLocaleString() : "Not set";
-  closingEl.textContent = closing ? closing.toLocaleString() : "Not set";
-  capacityEl.textContent = max || "Not set";
-  registeredEl.textContent = count;
-  remainingEl.textContent = max ? Math.max(max - count, 0) : "—";
+  if (statusEl) statusEl.textContent = derivedStatus;
+  if (openingEl) openingEl.textContent = opening ? opening.toLocaleString() : "Not set";
+  if (closingEl) closingEl.textContent = closing ? closing.toLocaleString() : "Not set";
+  if (capacityEl) capacityEl.textContent = max || "Not set";
+  if (registeredEl) registeredEl.textContent = count;
+  if (remainingEl) remainingEl.textContent = max ? Math.max(max - count, 0) : "—";
 
   if (!scheduleFormPopulated) {
-    document.getElementById("maxRegistrants").value = max || "";
-    document.getElementById("openingDate").value = toLocalInputValue(opening);
-    document.getElementById("closingDate").value = toLocalInputValue(closing);
+    const maxEl = document.getElementById("maxRegistrants");
+    const openEl = document.getElementById("openingDate");
+    const closeEl = document.getElementById("closingDate");
+
+    if (maxEl) maxEl.value = max || "";
+    if (openEl) openEl.value = toLocalInputValue(opening);
+    if (closeEl) closeEl.value = toLocalInputValue(closing);
     scheduleFormPopulated = true;
   }
 }
@@ -165,7 +179,10 @@ function wireScheduleForm() {
   const openBtn = document.getElementById("openBtn");
   const closeBtn = document.getElementById("closeBtn");
 
+  if (!form) return;
+
   function showMessage(text, type) {
+    if (!message) return;
     message.textContent = text;
     message.className = `form-message is-visible is-${type}`;
   }
@@ -201,7 +218,7 @@ function wireScheduleForm() {
     }
   });
 
-  openBtn.addEventListener("click", async () => {
+  openBtn?.addEventListener("click", async () => {
     try {
       await updateDoc(doc(db, "giveawaySettings", "schedule"), { status: "open" });
       showMessage("Giveaway marked open.", "info");
@@ -210,7 +227,7 @@ function wireScheduleForm() {
     }
   });
 
-  closeBtn.addEventListener("click", async () => {
+  closeBtn?.addEventListener("click", async () => {
     try {
       await updateDoc(doc(db, "giveawaySettings", "schedule"), { status: "closed" });
       showMessage("Giveaway marked closed.", "info");
@@ -225,19 +242,19 @@ function wireScheduleForm() {
 let filters = { search: "", level: "", status: "", account: "" };
 
 function wireFilters() {
-  document.getElementById("searchInput").addEventListener("input", (e) => {
+  document.getElementById("searchInput")?.addEventListener("input", (e) => {
     filters.search = e.target.value.trim().toLowerCase();
     renderTable();
   });
-  document.getElementById("levelFilter").addEventListener("change", (e) => {
+  document.getElementById("levelFilter")?.addEventListener("change", (e) => {
     filters.level = e.target.value;
     renderTable();
   });
-  document.getElementById("statusFilter").addEventListener("change", (e) => {
+  document.getElementById("statusFilter")?.addEventListener("change", (e) => {
     filters.status = e.target.value;
     renderTable();
   });
-  document.getElementById("accountFilter").addEventListener("change", (e) => {
+  document.getElementById("accountFilter")?.addEventListener("change", (e) => {
     filters.account = e.target.value;
     renderTable();
   });
@@ -289,49 +306,54 @@ function renderTable() {
   const cardsWrap = document.getElementById("regCards");
   const emptyState = document.getElementById("tableEmptyState");
 
-  emptyState.hidden = list.length > 0;
+  if (emptyState) emptyState.hidden = list.length > 0;
 
-  tbody.innerHTML = list
-    .map(
-      (r) => `
-    <tr>
-      <td>${escapeHtml(r.fullName)}</td>
-      <td class="mono">${escapeHtml(r.matricNumber)}</td>
-      <td>${escapeHtml(r.email)}</td>
-      <td>${escapeHtml(r.phone)}</td>
-      <td>${escapeHtml(r.level)}</td>
-      <td>${statusBadge(r.status)}</td>
-      <td>${r.eligible ? '<span class="badge badge-yes">Eligible</span>' : '<span class="badge badge-no">Pending</span>'}</td>
-      <td>${accountBadge(r.accountDetailsSubmitted)}</td>
-      <td>${formatDate(r.registeredAt)}</td>
-      <td><button class="link-btn" data-view="${escapeHtml(r.id)}">View</button></td>
-    </tr>`
-    )
-    .join("");
+  if (tbody) {
+    tbody.innerHTML = list
+      .map(
+        (r) => `
+      <tr>
+        <td>${escapeHtml(r.fullName)}</td>
+        <td class="mono">${escapeHtml(r.matricNumber)}</td>
+        <td>${escapeHtml(r.email)}</td>
+        <td>${escapeHtml(r.phone)}</td>
+        <td>${escapeHtml(r.level)}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${r.eligible ? '<span class="badge badge-yes">Eligible</span>' : '<span class="badge badge-no">Pending</span>'}</td>
+        <td>${accountBadge(r.accountDetailsSubmitted)}</td>
+        <td>${formatDate(r.registeredAt)}</td>
+        <td><button class="link-btn" data-view="${escapeHtml(r.id)}">View</button></td>
+      </tr>`
+      )
+      .join("");
+    
+    tbody.querySelectorAll("[data-view]").forEach((btn) =>
+      btn.addEventListener("click", () => openDetailModal(btn.dataset.view))
+    );
+  }
 
-  cardsWrap.innerHTML = list
-    .map(
-      (r) => `
-    <div class="reg-card">
-      <h4>${escapeHtml(r.fullName)}</h4>
-      <div class="mono">${escapeHtml(r.matricNumber)}</div>
-      <div class="reg-card-row"><span>${escapeHtml(r.level)}</span><span>${formatDate(r.registeredAt)}</span></div>
-      <div class="reg-card-badges">
-        ${statusBadge(r.status)}
-        ${r.eligible ? '<span class="badge badge-yes">Eligible</span>' : '<span class="badge badge-no">Pending</span>'}
-        ${accountBadge(r.accountDetailsSubmitted)}
-      </div>
-      <div class="reg-card-row"><button class="link-btn" data-view="${escapeHtml(r.id)}">View details</button></div>
-    </div>`
-    )
-    .join("");
+  if (cardsWrap) {
+    cardsWrap.innerHTML = list
+      .map(
+        (r) => `
+      <div class="reg-card">
+        <h4>${escapeHtml(r.fullName)}</h4>
+        <div class="mono">${escapeHtml(r.matricNumber)}</div>
+        <div class="reg-card-row"><span>${escapeHtml(r.level)}</span><span>${formatDate(r.registeredAt)}</span></div>
+        <div class="reg-card-badges">
+          ${statusBadge(r.status)}
+          ${r.eligible ? '<span class="badge badge-yes">Eligible</span>' : '<span class="badge badge-no">Pending</span>'}
+          ${accountBadge(r.accountDetailsSubmitted)}
+        </div>
+        <div class="reg-card-row"><button class="link-btn" data-view="${escapeHtml(r.id)}">View details</button></div>
+      </div>`
+      )
+      .join("");
 
-  tbody.querySelectorAll("[data-view]").forEach((btn) =>
-    btn.addEventListener("click", () => openDetailModal(btn.dataset.view))
-  );
-  cardsWrap.querySelectorAll("[data-view]").forEach((btn) =>
-    btn.addEventListener("click", () => openDetailModal(btn.dataset.view))
-  );
+    cardsWrap.querySelectorAll("[data-view]").forEach((btn) =>
+      btn.addEventListener("click", () => openDetailModal(btn.dataset.view))
+    );
+  }
 }
 
 // ---------------- Detail modal ----------------
@@ -339,13 +361,13 @@ function renderTable() {
 let currentModalId = null;
 
 function wireModal() {
-  document.getElementById("closeDetailModal").addEventListener("click", closeDetailModal);
-  document.getElementById("detailModal").addEventListener("click", (e) => {
+  document.getElementById("closeDetailModal")?.addEventListener("click", closeDetailModal);
+  document.getElementById("detailModal")?.addEventListener("click", (e) => {
     if (e.target.id === "detailModal") closeDetailModal();
   });
-  document.getElementById("markEligibleBtn").addEventListener("click", () => updateStatus("eligible", true));
-  document.getElementById("markNotEligibleBtn").addEventListener("click", () => updateStatus("notEligible", false));
-  document.getElementById("markProcessedBtn").addEventListener("click", () => updateStatus("processed", true));
+  document.getElementById("markEligibleBtn")?.addEventListener("click", () => updateStatus("eligible", true));
+  document.getElementById("markNotEligibleBtn")?.addEventListener("click", () => updateStatus("notEligible", false));
+  document.getElementById("markProcessedBtn")?.addEventListener("click", () => updateStatus("processed", true));
 }
 
 async function openDetailModal(id) {
@@ -367,23 +389,30 @@ async function openDetailModal(id) {
     // Admin reads should succeed under security rules
   }
 
-  document.getElementById("detailModalTitle").textContent = r.fullName || "Student details";
-  document.getElementById("detailList").innerHTML = `
-    <div><dt>Full name</dt><dd>${escapeHtml(r.fullName)}</dd></div>
-    <div><dt>Matric number</dt><dd>${escapeHtml(r.matricNumber)}</dd></div>
-    <div><dt>Email</dt><dd>${escapeHtml(r.email)}</dd></div>
-    <div><dt>Phone</dt><dd>${escapeHtml(r.phone)}</dd></div>
-    <div><dt>Department</dt><dd>${escapeHtml(r.department)}</dd></div>
-    <div><dt>Level</dt><dd>${escapeHtml(r.level)}</dd></div>
-    <div><dt>Registered</dt><dd>${formatDate(r.registeredAt)}</dd></div>
-    <div><dt>Status</dt><dd>${r.status || "—"}</dd></div>
-    ${accountFields}
-  `;
-  document.getElementById("detailModal").hidden = false;
+  const titleEl = document.getElementById("detailModalTitle");
+  const listEl = document.getElementById("detailList");
+  const modalEl = document.getElementById("detailModal");
+
+  if (titleEl) titleEl.textContent = r.fullName || "Student details";
+  if (listEl) {
+    listEl.innerHTML = `
+      <div><dt>Full name</dt><dd>${escapeHtml(r.fullName)}</dd></div>
+      <div><dt>Matric number</dt><dd>${escapeHtml(r.matricNumber)}</dd></div>
+      <div><dt>Email</dt><dd>${escapeHtml(r.email)}</dd></div>
+      <div><dt>Phone</dt><dd>${escapeHtml(r.phone)}</dd></div>
+      <div><dt>Department</dt><dd>${escapeHtml(r.department)}</dd></div>
+      <div><dt>Level</dt><dd>${escapeHtml(r.level)}</dd></div>
+      <div><dt>Registered</dt><dd>${formatDate(r.registeredAt)}</dd></div>
+      <div><dt>Status</dt><dd>${r.status || "—"}</dd></div>
+      ${accountFields}
+    `;
+  }
+  if (modalEl) modalEl.hidden = false;
 }
 
 function closeDetailModal() {
-  document.getElementById("detailModal").hidden = true;
+  const modalEl = document.getElementById("detailModal");
+  if (modalEl) modalEl.hidden = true;
   currentModalId = null;
 }
 
@@ -422,7 +451,7 @@ function downloadCsv(filename, csvText) {
 }
 
 function wireExports() {
-  document.getElementById("exportRegistrationsBtn").addEventListener("click", () => {
+  document.getElementById("exportRegistrationsBtn")?.addEventListener("click", () => {
     const csv = toCsv(registrations, [
       { label: "Full Name", value: (r) => r.fullName },
       { label: "Matric Number", value: (r) => r.matricNumber },
@@ -437,7 +466,7 @@ function wireExports() {
     downloadCsv("registrations.csv", csv);
   });
 
-  document.getElementById("exportAccountsBtn").addEventListener("click", async () => {
+  document.getElementById("exportAccountsBtn")?.addEventListener("click", async () => {
     try {
       const snap = await getDocs(collection(db, "accountDetails"));
       const rows = snap.docs.map((d) => ({ matricNumber: d.id, ...d.data() }));
