@@ -17,7 +17,7 @@ import {
 const authGate = document.getElementById("authGate");
 const dashboard = document.getElementById("dashboard");
 
-// Force unblock UI immediately
+// Force unblock UI immediately so "Checking admin access..." screen disappears
 if (authGate) authGate.hidden = true;
 if (dashboard) dashboard.hidden = false;
 
@@ -32,12 +32,6 @@ onAuthStateChanged(auth, (user) => {
 });
 
 document.getElementById("signOutBtn")?.addEventListener("click", async () => {
-  await signOut(auth);
-  window.location.href = "admin.html";
-});
-
-
-document.getElementById("signOutBtn").addEventListener("click", async () => {
   await signOut(auth);
   window.location.href = "admin.html";
 });
