@@ -1,13 +1,6 @@
-// account.js - eligibility lookup and account-details submission (Polished UI & Validation)
+// account.js - eligibility lookup and account-details submission (Passcode/Direct Mode)
 
-import { firebaseConfig, db } from "./firebase-config.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  inMemoryPersistence,
-  setPersistence,
-  signInAnonymously,
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { db } from "./firebase-config.js";
 import {
   doc,
   getDoc,
@@ -15,17 +8,6 @@ import {
   updateDoc,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const studentApp = initializeApp(firebaseConfig, "studentAccountApp");
-const studentAuth = getAuth(studentApp);
-
-async function ensureAnonymousStudent() {
-  if (studentAuth.currentUser?.isAnonymous) return studentAuth.currentUser;
-  await setPersistence(studentAuth, inMemoryPersistence);
-  const credential = await signInAnonymously(studentAuth);
-  if (!credential.user.isAnonymous) throw new Error("ANONYMOUS_AUTH_REQUIRED");
-  return credential.user;
-}
 
 // Floating Toast Notification Helper
 function showToast(message, type = "error") {
@@ -99,7 +81,6 @@ if (lookupForm) {
 
     setLookupLoading(true);
     try {
-      await ensureAnonymousStudent();
       const snap = await getDoc(doc(db, "registrations", matricNumber));
       
       if (!snap.exists()) {
@@ -185,7 +166,6 @@ if (detailsForm) {
 
     setDetailsLoading(true);
     try {
-      await ensureAnonymousStudent();
       const accountRef = doc(db, "accountDetails", verifiedMatric);
       const regRef = doc(db, "registrations", verifiedMatric);
 
@@ -208,7 +188,7 @@ if (detailsForm) {
 
     } catch (err) {
       console.error("Account details submission failed:", err);
-      showDetailsMessage("Could not submit your details. You may have already submitted, or eligibility may have changed.");
+      showDetailsMessage("Could not submit your details. Please check your connection and try again.");
     } finally {
       setDetailsLoading(false);
     }
