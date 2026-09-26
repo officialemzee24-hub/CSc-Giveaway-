@@ -1,27 +1,27 @@
 // account.js - eligibility lookup and account-details submission (Polished UI & Validation)
 
 import { firebaseConfig, db } from "./firebase-config.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
   inMemoryPersistence,
   setPersistence,
   signInAnonymously,
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   doc,
   getDoc,
   setDoc,
   updateDoc,
   serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const studentApp = initializeApp(firebaseConfig, "studentAccountApp");
 const studentAuth = getAuth(studentApp);
-await setPersistence(studentAuth, inMemoryPersistence);
 
 async function ensureAnonymousStudent() {
   if (studentAuth.currentUser?.isAnonymous) return studentAuth.currentUser;
+  await setPersistence(studentAuth, inMemoryPersistence);
   const credential = await signInAnonymously(studentAuth);
   if (!credential.user.isAnonymous) throw new Error("ANONYMOUS_AUTH_REQUIRED");
   return credential.user;
@@ -109,13 +109,13 @@ if (lookupForm) {
 
       const data = snap.data();
       if (data.accountDetailsSubmitted) {
-        lookupPanel.hidden = true;
-        alreadyPanel.hidden = false;
+        if (lookupPanel) lookupPanel.hidden = true;
+        if (alreadyPanel) alreadyPanel.hidden = false;
         return;
       }
       if (!data.eligible) {
-        lookupPanel.hidden = true;
-        notEligiblePanel.hidden = false;
+        if (lookupPanel) lookupPanel.hidden = true;
+        if (notEligiblePanel) notEligiblePanel.hidden = false;
         return;
       }
 
@@ -123,8 +123,8 @@ if (lookupForm) {
       const labelElem = document.getElementById("detailsMatricLabel");
       if (labelElem) labelElem.textContent = matricNumber;
 
-      lookupPanel.hidden = true;
-      detailsPanel.hidden = false;
+      if (lookupPanel) lookupPanel.hidden = true;
+      if (detailsPanel) detailsPanel.hidden = false;
     } catch (err) {
       console.error("Eligibility lookup failed:", err);
       showLookupMessage("Could not check eligibility right now. Please try again.");
@@ -198,10 +198,10 @@ if (detailsForm) {
 
       await updateDoc(regRef, { accountDetailsSubmitted: true });
 
-      detailsPanel.hidden = true;
+      if (detailsPanel) detailsPanel.hidden = true;
       if (successPanel) {
         successPanel.hidden = false;
-      } else {
+      } else if (alreadyPanel) {
         alreadyPanel.hidden = false;
       }
       showToast("Account details submitted successfully!", "success");
