@@ -49,17 +49,32 @@ function initDashboard() {
   if (dashboardInitialized) return;
   dashboardInitialized = true;
 
-  onSnapshot(collection(db, "registrations"), (snap) => {
-    registrations = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    renderStats();
-    renderTable();
-  });
+  // Listen to registrations with error callback
+  onSnapshot(
+    collection(db, "registrations"),
+    (snap) => {
+      registrations = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderStats();
+      renderTable();
+    },
+    (err) => {
+      console.error("Registrations snapshot error:", err);
+      alert("Error loading registrations: " + (err.message || err.code));
+    }
+  );
 
-  onSnapshot(doc(db, "giveawaySettings", "schedule"), (snap) => {
-    schedule = snap.exists() ? snap.data() : null;
-    renderScheduleSummary();
-    renderStats();
-  });
+  // Listen to giveaway schedule settings with error callback
+  onSnapshot(
+    doc(db, "giveawaySettings", "schedule"),
+    (snap) => {
+      schedule = snap.exists() ? snap.data() : null;
+      renderScheduleSummary();
+      renderStats();
+    },
+    (err) => {
+      console.error("Schedule snapshot error:", err);
+    }
+  );
 
   wireScheduleForm();
   wireFilters();
