@@ -1,6 +1,6 @@
 // admin.js - Debug Version
 
-const ADMIN_PASSCODE = "ApexAdmin2026#"; // Set your desired passcode here
+const ADMIN_PASSCODE = "1234567890#"; // Set your desired passcode here
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("admin.js loaded successfully");
