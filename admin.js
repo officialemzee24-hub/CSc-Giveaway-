@@ -1,81 +1,52 @@
-// admin.js — admin.html (login only; dashboard logic lives in admin-dashboard.js)
+// admin.js - Passcode Gatekeeper
 
-import { auth, db } from "./firebase-config.js";
-import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const ADMIN_PASSCODE = "ApexAdmin2026#"; // Set your secret admin passcode here
 
-const form = document.getElementById("loginForm");
-const btn = document.getElementById("loginBtn");
-const message = document.getElementById("loginMessage");
+const loginForm = document.getElementById("loginForm");
+const passcodeInput = document.getElementById("passcode");
+const loginBtn = document.getElementById("loginBtn");
+const loginMessage = document.getElementById("loginMessage");
 
-function showMessage(text) {
-  if (!message) return;
-  message.textContent = text;
-  message.classList.add("is-visible");
+function showMessage(text, type = "error") {
+  if (loginMessage) {
+    loginMessage.textContent = text;
+    loginMessage.className = `form-message is-visible is-${type}`;
+  }
 }
 
-function setLoading(isLoading) {
-  if (!btn) return;
-  btn.disabled = isLoading;
-  btn.classList.toggle("is-loading", isLoading);
-  const label = btn.querySelector(".btn-label");
-  if (label) label.textContent = isLoading ? "Signing in…" : "Sign in";
+function clearMessage() {
+  if (loginMessage) {
+    loginMessage.textContent = "";
+    loginMessage.className = "form-message";
+  }
 }
 
-if (form) {
-  form.addEventListener("submit", async (e) => {
+if (loginForm) {
+  // Clear error highlight as user types
+  if (passcodeInput) {
+    passcodeInput.addEventListener("input", () => {
+      passcodeInput.classList.remove("is-invalid");
+      clearMessage();
+    });
+  }
+
+  loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    if (message) message.classList.remove("is-visible");
+    clearMessage();
 
-    const emailEl = document.getElementById("email");
-    const passwordEl = document.getElementById("password");
+    const enteredPasscode = passcodeInput ? passcodeInput.value.trim() : "";
 
-    const email = emailEl ? emailEl.value.trim() : "";
-    const password = passwordEl ? passwordEl.value : "";
+    if (!enteredPasscode) {
+      if (passcodeInput) passcodeInput.classList.add("is-invalid");
+      return showMessage("Please enter the admin passcode.", "error");
+    }
 
-    setLoading(true);
-    let authenticatedUser = null;
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      authenticatedUser = cred.user;
-
-      const adminRef = doc(db, "admins", authenticatedUser.uid);
-      const adminSnap = await getDoc(adminRef);
-
-      console.log("Admin check:", {
-        projectId: "giveaway-84ec1",
-        uid: authenticatedUser.uid,
-        adminDocumentExists: adminSnap.exists(),
-        role: adminSnap.exists() ? adminSnap.data().role : null
-      });
-
-      if (!adminSnap.exists() || adminSnap.data().role !== "admin") {
-        await signOut(auth);
-        authenticatedUser = null;
-        showMessage("This account does not have administrator access.");
-        return;
-      }
-
+    if (enteredPasscode === ADMIN_PASSCODE) {
+      sessionStorage.setItem("admin_authenticated", "true");
       window.location.href = "admin-dashboard.html";
-    } catch (err) {
-      console.error("Admin sign-in error:", err.code, err.message);
-
-      // Never leave a partially-authorized admin session behind.
-      if (authenticatedUser) {
-        try { await signOut(auth); } catch (signOutErr) {
-          console.error("Could not clear failed admin session:", signOutErr);
-        }
-      }
-      const map = {
-        "auth/invalid-email": "Enter a valid email address.",
-        "auth/invalid-credential": "Incorrect email or password.",
-        "auth/wrong-password": "Incorrect email or password.",
-        "auth/user-not-found": "Incorrect email or password.",
-        "auth/too-many-requests": "Too many attempts. Try again later.",
-      };
-      showMessage(map[err.code] || `Could not sign in (${err.code || "no error code — see below"}).`);
-    } finally {
-      setLoading(false);
+    } else {
+      if (passcodeInput) passcodeInput.classList.add("is-invalid");
+      showMessage("Invalid admin passcode.", "error");
     }
   });
 }
