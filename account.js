@@ -1,13 +1,31 @@
-// account.js - eligibility lookup and account-details submission (Passcode/Direct Mode)
+// account.js - eligibility lookup and account-details submission (Polished UI & Validation)
 
-import { db } from "./firebase-config.js";
+import { firebaseConfig, db } from "./firebase-config.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import {
+  getAuth,
+  inMemoryPersistence,
+  setPersistence,
+  signInAnonymously,
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import {
   doc,
   getDoc,
   setDoc,
   updateDoc,
   serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const studentApp = initializeApp(firebaseConfig, "studentAccountApp");
+const studentAuth = getAuth(studentApp);
+await setPersistence(studentAuth, inMemoryPersistence);
+
+async function ensureAnonymousStudent() {
+  if (studentAuth.currentUser?.isAnonymous) return studentAuth.currentUser;
+  const credential = await signInAnonymously(studentAuth);
+  if (!credential.user.isAnonymous) throw new Error("ANONYMOUS_AUTH_REQUIRED");
+  return credential.user;
+}
 
 // Floating Toast Notification Helper
 function showToast(message, type = "error") {
@@ -81,6 +99,7 @@ if (lookupForm) {
 
     setLookupLoading(true);
     try {
+      await ensureAnonymousStudent();
       const snap = await getDoc(doc(db, "registrations", matricNumber));
       
       if (!snap.exists()) {
@@ -90,13 +109,13 @@ if (lookupForm) {
 
       const data = snap.data();
       if (data.accountDetailsSubmitted) {
-        if (lookupPanel) lookupPanel.hidden = true;
-        if (alreadyPanel) alreadyPanel.hidden = false;
+        lookupPanel.hidden = true;
+        alreadyPanel.hidden = false;
         return;
       }
       if (!data.eligible) {
-        if (lookupPanel) lookupPanel.hidden = true;
-        if (notEligiblePanel) notEligiblePanel.hidden = false;
+        lookupPanel.hidden = true;
+        notEligiblePanel.hidden = false;
         return;
       }
 
@@ -104,8 +123,8 @@ if (lookupForm) {
       const labelElem = document.getElementById("detailsMatricLabel");
       if (labelElem) labelElem.textContent = matricNumber;
 
-      if (lookupPanel) lookupPanel.hidden = true;
-      if (detailsPanel) detailsPanel.hidden = false;
+      lookupPanel.hidden = true;
+      detailsPanel.hidden = false;
     } catch (err) {
       console.error("Eligibility lookup failed:", err);
       showLookupMessage("Could not check eligibility right now. Please try again.");
@@ -166,6 +185,7 @@ if (detailsForm) {
 
     setDetailsLoading(true);
     try {
+      await ensureAnonymousStudent();
       const accountRef = doc(db, "accountDetails", verifiedMatric);
       const regRef = doc(db, "registrations", verifiedMatric);
 
@@ -178,17 +198,17 @@ if (detailsForm) {
 
       await updateDoc(regRef, { accountDetailsSubmitted: true });
 
-      if (detailsPanel) detailsPanel.hidden = true;
+      detailsPanel.hidden = true;
       if (successPanel) {
         successPanel.hidden = false;
-      } else if (alreadyPanel) {
+      } else {
         alreadyPanel.hidden = false;
       }
       showToast("Account details submitted successfully!", "success");
 
     } catch (err) {
       console.error("Account details submission failed:", err);
-      showDetailsMessage("Could not submit your details. Please check your connection and try again.");
+      showDetailsMessage("Could not submit your details. You may have already submitted, or eligibility may have changed.");
     } finally {
       setDetailsLoading(false);
     }
