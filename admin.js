@@ -1,52 +1,46 @@
-// admin.js - Passcode Gatekeeper
+// admin.js - Debug Version
 
-const ADMIN_PASSCODE = "ApexAdmin2026#"; // Set your secret admin passcode here
+const ADMIN_PASSCODE = "ApexAdmin2026#"; // Set your desired passcode here
 
-const loginForm = document.getElementById("loginForm");
-const passcodeInput = document.getElementById("passcode");
-const loginBtn = document.getElementById("loginBtn");
-const loginMessage = document.getElementById("loginMessage");
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("admin.js loaded successfully");
 
-function showMessage(text, type = "error") {
-  if (loginMessage) {
-    loginMessage.textContent = text;
-    loginMessage.className = `form-message is-visible is-${type}`;
-  }
-}
+  const loginForm = document.getElementById("loginForm");
+  const passcodeInput = document.getElementById("passcode");
+  const loginMessage = document.getElementById("loginMessage");
 
-function clearMessage() {
-  if (loginMessage) {
-    loginMessage.textContent = "";
-    loginMessage.className = "form-message";
-  }
-}
-
-if (loginForm) {
-  // Clear error highlight as user types
-  if (passcodeInput) {
-    passcodeInput.addEventListener("input", () => {
-      passcodeInput.classList.remove("is-invalid");
-      clearMessage();
-    });
+  if (!loginForm) {
+    console.error("Error: loginForm element not found!");
+    return;
   }
 
   loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    clearMessage();
+    console.log("Form submit caught!");
 
     const enteredPasscode = passcodeInput ? passcodeInput.value.trim() : "";
 
     if (!enteredPasscode) {
-      if (passcodeInput) passcodeInput.classList.add("is-invalid");
-      return showMessage("Please enter the admin passcode.", "error");
+      if (loginMessage) {
+        loginMessage.textContent = "Please enter the admin passcode.";
+        loginMessage.className = "form-message is-visible is-error";
+      } else {
+        alert("Please enter the admin passcode.");
+      }
+      return;
     }
 
     if (enteredPasscode === ADMIN_PASSCODE) {
       sessionStorage.setItem("admin_authenticated", "true");
+      console.log("Passcode correct. Redirecting...");
       window.location.href = "admin-dashboard.html";
     } else {
-      if (passcodeInput) passcodeInput.classList.add("is-invalid");
-      showMessage("Invalid admin passcode.", "error");
+      if (loginMessage) {
+        loginMessage.textContent = "Invalid admin passcode.";
+        loginMessage.className = "form-message is-visible is-error";
+      } else {
+        alert("Invalid admin passcode.");
+      }
     }
   });
-}
+});
