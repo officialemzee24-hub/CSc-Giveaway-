@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Departmental Giveaway 2026 — Computer Science</title>
+<meta name="description" content="Registration for the Computer Science Department Student Giveaway 2026." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- ===================== HEADER ===================== -->
+<header class="site-header">
+  <div class="wrap header-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">CS</span>
+      <div class="brand-text">
+        <span class="brand-dept">Computer Science Department</span>
+        <span class="brand-event">Student Giveaway 2026</span>
+      </div>
+    </div>
+    <div class="header-status" id="headerStatus">
+      <span class="status-dot" id="headerStatusDot"></span>
+      <span id="headerStatusLabel">Checking status…</span>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="hero-kicker">NACOS-aligned · Computer Science Department</p>
+        <h1 class="hero-title">The Departmental<br />Giveaway, 2026.</h1>
+        <p class="hero-desc">
+          A department-run giveaway open to registered Computer Science students.
+          Register with your matric number, wait for eligibility review, and
+          eligible students will be invited to submit account details securely.
+        </p>
+        <div class="hero-actions">
+          <a href="#register" class="btn btn-primary">Register now</a>
+          <a href="#how-it-works" class="btn btn-ghost">How it works</a>
+        </div>
+      </div>
+
+      <div class="countdown-card" id="countdownCard">
+        <p class="countdown-label" id="countdownLabel">Loading schedule…</p>
+        <div class="countdown-digits" id="countdownDigits" aria-live="polite">
+          <div class="digit-block"><span class="digit" id="ctDays">00</span><span class="digit-unit">Days</span></div>
+          <div class="digit-block"><span class="digit" id="ctHours">00</span><span class="digit-unit">Hrs</span></div>
+          <div class="digit-block"><span class="digit" id="ctMinutes">00</span><span class="digit-unit">Min</span></div>
+          <div class="digit-block"><span class="digit" id="ctSeconds">00</span><span class="digit-unit">Sec</span></div>
+        </div>
+        <div class="capacity-row" id="capacityRow">
+          <div class="capacity-bar"><div class="capacity-fill" id="capacityFill"></div></div>
+          <p class="capacity-text" id="capacityText">Loading capacity…</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== HOW IT WORKS ===================== -->
+  <section class="section" id="how-it-works">
+    <div class="wrap">
+      <h2 class="section-title">How it works</h2>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-number">1</span>
+          <div>
+            <h3>Register</h3>
+            <p>Submit your name, matric number, email, phone, and level. One registration per matric number.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-number">2</span>
+          <div>
+            <h3>Eligibility review</h3>
+            <p>The department reviews registrations and marks eligible students. This may take a few days.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-number">3</span>
+          <div>
+            <h3>Submit account details</h3>
+            <p>Once marked eligible, return with your matric number to securely submit your account details.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-number">4</span>
+          <div>
+            <h3>Processing</h3>
+            <p>The department processes submitted details. You will be notified through department channels.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===================== REGISTRATION ===================== -->
+  <section class="section section-alt" id="register">
+    <div class="wrap register-grid">
+      <div class="register-info">
+        <h2 class="section-title">Register</h2>
+        <p>Registration closes automatically once the department's schedule ends or the maximum number of registrants is reached — whichever comes first.</p>
+        <ul class="info-list">
+          <li>Department defaults to Computer Science.</li>
+          <li>Each matric number may register once.</li>
+          <li>Registering does not guarantee eligibility.</li>
+        </ul>
+      </div>
+
+      <form id="registrationForm" novalidate>
+        <div id="formMessage" class="form-message"></div>
+
+        <div class="form-group">
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" name="fullName" placeholder="Enter full name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="matricNumber">Matriculation / Reg Number</label>
+          <input type="text" id="matricNumber" name="matricNumber" placeholder="Enter matric number" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="Enter email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" name="phone" placeholder="Enter phone number" required>
+        </div>
+
+        <div class="form-group">
+          <label for="level">Level</label>
+          <select id="level" name="level" required>
+            <option value="" disabled selected>Select level</option>
+            <option value="100 Level">100 Level</option>
+            <option value="200 Level">200 Level</option>
+            <option value="300 Level">300 Level</option>
+            <option value="400 Level">400 Level</option>
+          </select>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary">Register</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===================== ELIGIBILITY ===================== -->
+  <section class="section" id="eligibility">
+    <div class="wrap">
+      <h2 class="section-title">Eligibility</h2>
+      <p class="section-lead">Eligibility is reviewed by the department after registration closes or during the giveaway window. If you are marked eligible, the account details form linked below will accept your matric number.</p>
+      <a href="account.html" class="btn btn-outline">Submit account details</a>
+    </div>
+  </section>
+
+  <!-- ===================== FAQ ===================== -->
+  <section class="section section-alt" id="faq">
+    <div class="wrap">
+      <h2 class="section-title">Frequently asked questions</h2>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Who can register?</summary>
+          <p>Any currently registered Computer Science student with a valid matric number.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Can I register more than once?</summary>
+          <p>No. Each matric number can only be used for one registration.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What happens when all slots are filled?</summary>
+          <p>Registration closes automatically and the form becomes unavailable, even before the closing date.</p>
+        </details>
+        <details class="faq-item">
+          <summary>When will I know if I am eligible?</summary>
+          <p>The department will announce eligibility through official department channels after review.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Why are account details requested?</summary>
+          <p>Account details are required to process the giveaway payout to eligible students only.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What happens after I submit account details?</summary>
+          <p>Your submission is recorded securely and moves to processing. It cannot be viewed or edited by other students.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FINAL CTA ===================== -->
+  <section class="section final-cta">
+    <div class="wrap">
+      <h2 class="section-title">Ready to register?</h2>
+      <p>It takes less than a minute.</p>
+      <a href="#register" class="btn btn-primary">Register now</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Computer Science Department · Student Giveaway 2026</p>
+    <p><a href="admin.html">Admin</a></p>
+  </div>
+</footer>
+
+<!-- ===================== SUCCESS MODAL ===================== -->
+<div id="successModal" class="modal-overlay hidden" hidden>
+  <div class="modal-card">
+    <div class="success-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+        <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h2>Registration Successful!</h2>
+    <p>Your details have been submitted for eligibility review.</p>
+    
+    <div class="reg-summary">
+      <p><span>Name:</span> <strong id="summaryName">-</strong></p>
+      <p><span>Matric No:</span> <strong id="summaryMatric">-</strong></p>
+      <p><span>Level:</span> <strong id="summaryLevel">-</strong></p>
+    </div>
+
+    <button type="button" id="closeModalBtn" class="btn btn-primary">Done</button>
+  </div>
+</div>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
