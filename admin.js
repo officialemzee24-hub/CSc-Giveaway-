@@ -1,6 +1,6 @@
-// admin.js - Fail-safe Passcode Gatekeeper
+// admin.js - Fail-Safe Passcode Gatekeeper
 
-const ADMIN_PASSCODE = "ApexAdmin2026#"; // Make sure this matches what you type exactly
+const ADMIN_PASSCODE = "123456"; // Try 123456 first to verify
 
 document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("loginForm");
@@ -27,18 +27,16 @@ document.addEventListener("DOMContentLoaded", () => {
     loginForm.addEventListener("submit", (e) => {
       e.preventDefault();
 
-      // Read raw value and strip unexpected spaces/invisible characters
-      const enteredPasscode = passcodeInput ? passcodeInput.value.trim().replace(/[\u200B-\u200D\uFEFF]/g, "") : "";
-
-      console.log("Entered length:", enteredPasscode.length);
-      console.log("Expected length:", ADMIN_PASSCODE.length);
+      // Clean input string from invisible whitespace
+      const rawInput = passcodeInput ? passcodeInput.value : "";
+      const enteredPasscode = rawInput.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
 
       if (!enteredPasscode) {
         if (passcodeInput) passcodeInput.classList.add("is-invalid");
         return showMsg("Please enter the admin passcode.");
       }
 
-      // Case-sensitive comparison
+      // Check passcode
       if (enteredPasscode === ADMIN_PASSCODE) {
         sessionStorage.setItem("admin_authenticated", "true");
         showMsg("Passcode accepted! Redirecting...", false);
@@ -47,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 300);
       } else {
         if (passcodeInput) passcodeInput.classList.add("is-invalid");
-        showMsg(`Invalid admin passcode. (Typed ${enteredPasscode.length} chars, expected ${ADMIN_PASSCODE.length})`);
+        showMsg(`Invalid passcode. Received "${enteredPasscode}" (${enteredPasscode.length} chars). Expected ${ADMIN_PASSCODE.length} chars.`);
       }
     });
   }
