@@ -201,10 +201,11 @@ function clearMessage() {
 }
 
 function normalizeMatric(raw) {
-  return raw.trim().toUpperCase().replace(/\s+/g, "");
+  // Strips out spaces and forward slashes so Firestore accepts it as a document ID
+  return raw.trim().toUpperCase().replace(/[\/\s+]/g, "");
 }
 
-const MATRIC_PATTERN = /^[A-Z0-9/]{4,20}$/;
+const MATRIC_PATTERN = /^[A-Z0-9]{4,20}$/;
 const PHONE_PATTERN = /^[0-9+ ]{7,15}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -315,7 +316,7 @@ if (form) {
           level,
           registeredAt: serverTimestamp(),
           status: "registered",
-          eligible: isEligible,
+          eligible: isEligible, // Keeps your 514 logic active!
           accountDetailsSubmitted: false,
         });
 
@@ -362,33 +363,20 @@ function setLoading(isLoading) {
 const modal = document.getElementById("successModal");
 const closeModalBtn = document.getElementById("closeModalBtn");
 
-function showSuccessModal(fullName, matricNumber, level) {
-  const summaryName = document.getElementById("summaryName");
-  const summaryMatric = document.getElementById("summaryMatric");
-  const summaryLevel = document.getElementById("summaryLevel");
-
-  if (summaryName) summaryName.textContent = fullName;
-  if (summaryMatric) summaryMatric.textContent = matricNumber;
-  if (summaryLevel) summaryLevel.textContent = level;
-
-  if (modal) {
-    modal.classList.remove("hidden");
-    modal.hidden = false;
-  }
-}
-
-if (closeModalBtn && modal) {
-  closeModalBtn.addEventListener("click", () => {
-    modal.classList.add("hidden");
-    modal.hidden = true;
-  });
-}
-
-if (modal) {
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) {
+(function initModalEvents() {
+  if (closeModalBtn && modal) {
+    closeModalBtn.addEventListener("click", () => {
       modal.classList.add("hidden");
       modal.hidden = true;
-    }
-  });
-}
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.classList.add("hidden");
+        modal.hidden = true;
+      }
+    });
+  }
+})();
