@@ -30,28 +30,17 @@ onAuthStateChanged(auth, async (user) => {
       window.location.href = "admin.html";
       return;
     }
-                const adminEmailEl = document.getElementById("adminEmail");
+    const adminEmailEl = document.getElementById("adminEmail");
     if (adminEmailEl) adminEmailEl.textContent = user.email;
-    
-    // 1. Destroy the loading screen
-    if (authGate) authGate.remove();
-    
-    // 2. Reveal the dashboard
+    if (authGate) authGate.hidden = true;
     if (dashboard) dashboard.hidden = false;
-    
-    // 3. Force the browser to unlock scrolling (The Fix)
-    document.body.style.overflow = "auto";
-    document.documentElement.style.overflow = "auto";
-    document.body.style.height = "auto";
-    
     initDashboard();
   } catch (err) {
-
-
     if (authGate) {
       authGate.textContent = "Could not verify admin access. Please sign in again.";
     }
   }
+});
 
 const signOutBtn = document.getElementById("signOutBtn");
 if (signOutBtn) {
