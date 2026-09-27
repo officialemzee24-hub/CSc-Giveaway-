@@ -27,12 +27,16 @@
       <div class="field">
         <label for="passcode">Admin Passcode</label>
         <input 
-          type="password" 
-          id="passcode" 
-          placeholder="Enter secret passcode" 
-          autocomplete="current-password" 
-          required 
-        />
+  type="password" 
+  id="passcode" 
+  placeholder="Enter secret passcode" 
+  autocomplete="off" 
+  autocorrect="off" 
+  autocapitalize="off" 
+  spellcheck="false" 
+  required 
+/>
+
       </div>
       <p class="form-message" id="loginMessage" role="alert" aria-live="assertive"></p>
       <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
