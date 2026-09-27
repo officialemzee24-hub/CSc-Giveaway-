@@ -30,17 +30,18 @@ onAuthStateChanged(auth, async (user) => {
       window.location.href = "admin.html";
       return;
     }
-        const adminEmailEl = document.getElementById("adminEmail");
+            const adminEmailEl = document.getElementById("adminEmail");
     if (adminEmailEl) adminEmailEl.textContent = user.email;
     
-    // 1. Force the loading screen to completely disappear
-    if (authGate) authGate.style.display = "none";
+    // 1. Completely remove the loading element from the DOM
+    if (authGate) authGate.remove();
     
     // 2. Reveal the dashboard
-    if (dashboard) dashboard.hidden = false; 
+    if (dashboard) dashboard.hidden = false;
     
     initDashboard();
   } catch (err) {
+
     if (authGate) {
       authGate.textContent = "Could not verify admin access. Please sign in again.";
     }
