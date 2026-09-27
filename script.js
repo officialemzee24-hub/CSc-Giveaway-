@@ -1,19 +1,19 @@
 // script.js - student landing + registration
 
 import { firebaseConfig, db } from "./firebase-config.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
   getAuth,
   inMemoryPersistence,
   setPersistence,
   signInAnonymously,
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import {
   doc,
   onSnapshot,
   runTransaction,
   serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // Student authentication setup (non-blocking)
 const studentApp = initializeApp(firebaseConfig, "studentApp");
