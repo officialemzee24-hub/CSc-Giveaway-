@@ -25,12 +25,14 @@
 
     <form id="loginForm" novalidate>
       <div class="field">
-        <label for="email">Email address</label>
-        <input type="email" id="email" autocomplete="email" required />
-      </div>
-      <div class="field">
-        <label for="password">Password</label>
-        <input type="password" id="password" autocomplete="current-password" required />
+        <label for="passcode">Admin Passcode</label>
+        <input 
+          type="password" 
+          id="passcode" 
+          placeholder="Enter secret passcode" 
+          autocomplete="current-password" 
+          required 
+        />
       </div>
       <p class="form-message" id="loginMessage" role="alert" aria-live="assertive"></p>
       <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
