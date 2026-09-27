@@ -1,485 +1,367 @@
-// admin-dashboard.js — Clean direct init
+// admin-dashboard.js - Admin Management Dashboard (Passcode Session Mode)
 
-import { auth, db } from "./firebase-config.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { db } from "./firebase-config.js";
 import {
   doc,
   getDoc,
-  updateDoc,
-  onSnapshot,
+  setDoc,
   collection,
-  getDocs,
+  onSnapshot,
+  query,
+  orderBy,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ---------------- Auth guard & Direct Bypass ----------------
-
-function revealDashboard() {
-  const authGate = document.getElementById("authGate");
-  const dashboard = document.getElementById("dashboard");
-
-  if (authGate) authGate.hidden = true;
-  if (dashboard) dashboard.hidden = false;
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", revealDashboard);
-} else {
-  revealDashboard();
-}
-
-// Initialize dashboard immediately
-initDashboard();
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    const emailEl = document.getElementById("adminEmail");
-    if (emailEl) emailEl.textContent = user.email;
-  }
-});
-
-document.getElementById("signOutBtn")?.addEventListener("click", async () => {
-  await signOut(auth);
+// 1. Session Guard (Redirect immediately if passcode session is missing)
+if (sessionStorage.getItem("admin_authenticated") !== "true") {
   window.location.href = "admin.html";
-});
-
-// ---------------- Dashboard state ----------------
-
-let registrations = []; // [{id, ...data}]
-let schedule = null;
-let dashboardInitialized = false;
-
-function initDashboard() {
-  if (dashboardInitialized) return;
-  dashboardInitialized = true;
-
-  // Listen to registrations with error callback
-  onSnapshot(
-    collection(db, "registrations"),
-    (snap) => {
-      registrations = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderStats();
-      renderTable();
-    },
-    (err) => {
-      console.error("Registrations snapshot error:", err);
-      alert("Error loading registrations: " + (err.message || err.code));
-    }
-  );
-
-  // Listen to giveaway schedule settings with error callback
-  onSnapshot(
-    doc(db, "giveawaySettings", "schedule"),
-    (snap) => {
-      schedule = snap.exists() ? snap.data() : null;
-      renderScheduleSummary();
-      renderStats();
-    },
-    (err) => {
-      console.error("Schedule snapshot error:", err);
-    }
-  );
-
-  wireScheduleForm();
-  wireFilters();
-  wireModal();
-  wireExports();
 }
 
-// ---------------- Stats ----------------
+// Floating Toast Notification Helper
+function showToast(message, type = "error") {
+  const existingToast = document.querySelector(".toast-notification");
+  if (existingToast) existingToast.remove();
 
-function renderStats() {
-  const total = registrations.length;
-  const eligible = registrations.filter((r) => r.status === "eligible" || (r.eligible && r.status !== "processed")).length;
-  const submitted = registrations.filter((r) => r.accountDetailsSubmitted).length;
-  const processed = registrations.filter((r) => r.status === "processed").length;
-  const max = schedule?.maxRegistrants || 0;
-  const remaining = Math.max(max - (schedule?.registeredCount ?? total), 0);
+  const toast = document.createElement("div");
+  toast.className = `toast-notification toast-${type}`;
 
-  document.getElementById("statTotal").textContent = total;
-  document.getElementById("statEligible").textContent = eligible;
-  document.getElementById("statSubmitted").textContent = submitted;
-  document.getElementById("statProcessed").textContent = processed;
-  document.getElementById("statRemaining").textContent = max ? remaining : "—";
+  const icon =
+    type === "error"
+      ? `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+      : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>`;
 
-  ["100 Level", "200 Level", "300 Level", "400 Level"].forEach((level) => {
-    const key = "lvl" + level.split(" ")[0];
-    const count = registrations.filter((r) => r.level === level).length;
-    const el = document.getElementById(key);
-    if (el) el.textContent = count;
+  toast.innerHTML = `${icon}<span>${message}</span>`;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("toast-hide");
+    toast.addEventListener("transitionend", () => toast.remove());
+  }, 3500);
+}
+
+// 2. Global State & DOM References
+let registrationsCache = [];
+let accountDetailsCache = new Map();
+let currentFilter = "all";
+let currentSearch = "";
+
+const logoutBtn = document.getElementById("logoutBtn");
+const scheduleForm = document.getElementById("scheduleForm");
+const maxRegistrantsInput = document.getElementById("maxRegistrants");
+const openingDateInput = document.getElementById("openingDate");
+const closingDateInput = document.getElementById("closingDate");
+const statusOverrideSelect = document.getElementById("statusOverride");
+const scheduleSaveBtn = document.getElementById("scheduleSaveBtn");
+
+const totalRegisteredEl = document.getElementById("totalRegistered");
+const totalEligibleEl = document.getElementById("totalEligible");
+const totalSubmittedAccountEl = document.getElementById("totalSubmittedAccount");
+
+const searchInput = document.getElementById("searchInput");
+const filterPills = document.querySelectorAll(".filter-pill");
+const registrantsTableBody = document.getElementById("registrantsTableBody");
+const exportCsvBtn = document.getElementById("exportCsvBtn");
+
+// 3. Logout Action
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    sessionStorage.removeItem("admin_authenticated");
+    window.location.href = "admin.html";
   });
 }
 
-// ---------------- Schedule control ----------------
+// 4. Load & Manage Schedule Settings
+const scheduleRef = doc(db, "giveawaySettings", "schedule");
 
-function toLocalInputValue(date) {
-  if (!date) return "";
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+async function loadScheduleSettings() {
+  try {
+    const snap = await getDoc(scheduleRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (maxRegistrantsInput) maxRegistrantsInput.value = data.maxRegistrants || 100;
+      if (openingDateInput && data.openingDate) {
+        openingDateInput.value = formatForDatetimeLocal(data.openingDate);
+      }
+      if (closingDateInput && data.closingDate) {
+        closingDateInput.value = formatForDatetimeLocal(data.closingDate);
+      }
+      if (statusOverrideSelect) statusOverrideSelect.value = data.status || "auto";
+    }
+  } catch (err) {
+    console.error("Error loading schedule settings:", err);
+    showToast("Failed to load schedule settings.", "error");
+  }
 }
 
-function toDate(ts) {
-  if (!ts) return null;
-  return typeof ts.toDate === "function" ? ts.toDate() : new Date(ts);
+function formatForDatetimeLocal(ts) {
+  const date = typeof ts.toDate === "function" ? ts.toDate() : new Date(ts);
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
 }
 
-let scheduleFormPopulated = false;
+if (scheduleForm) {
+  scheduleForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (scheduleSaveBtn) {
+      scheduleSaveBtn.disabled = true;
+      scheduleSaveBtn.textContent = "Saving...";
+    }
 
-function renderScheduleSummary() {
-  const statusEl = document.getElementById("summaryStatus");
-  const openingEl = document.getElementById("summaryOpening");
-  const closingEl = document.getElementById("summaryClosing");
-  const capacityEl = document.getElementById("summaryCapacity");
-  const registeredEl = document.getElementById("summaryRegistered");
-  const remainingEl = document.getElementById("summaryRemaining");
+    try {
+      const maxVal = parseInt(maxRegistrantsInput.value, 10) || 0;
+      const openVal = openingDateInput.value ? new Date(openingDateInput.value) : null;
+      const closeVal = closingDateInput.value ? new Date(closingDateInput.value) : null;
+      const statusVal = statusOverrideSelect.value;
 
-  if (!schedule) {
-    [statusEl, openingEl, closingEl, capacityEl, registeredEl, remainingEl].forEach((el) => {
-      if (el) el.textContent = "Not set";
+      await setDoc(
+        scheduleRef,
+        {
+          maxRegistrants: maxVal,
+          openingDate: openVal ? Timestamp.fromDate(openVal) : null,
+          closingDate: closeVal ? Timestamp.fromDate(closeVal) : null,
+          status: statusVal,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      showToast("Schedule settings saved successfully!", "success");
+    } catch (err) {
+      console.error("Error saving schedule settings:", err);
+      showToast("Could not save schedule settings.", "error");
+    } finally {
+      if (scheduleSaveBtn) {
+        scheduleSaveBtn.disabled = false;
+        scheduleSaveBtn.textContent = "Save Schedule Settings";
+      }
+    }
+  });
+}
+
+// 5. Real-Time Listeners for Registrations & Account Details
+function initRealtimeListeners() {
+  // Listen to Account Details Collection
+  const accountsCol = collection(db, "accountDetails");
+  onSnapshot(accountsCol, (snapshot) => {
+    accountDetailsCache.clear();
+    snapshot.forEach((docSnap) => {
+      accountDetailsCache.set(docSnap.id, docSnap.data());
     });
+    renderDashboard();
+  }, (err) => {
+    console.error("Error fetching account details:", err);
+  });
+
+  // Listen to Registrations Collection
+  const regCol = collection(db, "registrations");
+  const q = query(regCol, orderBy("registeredAt", "desc"));
+
+  onSnapshot(q, (snapshot) => {
+    registrationsCache = [];
+    snapshot.forEach((docSnap) => {
+      registrationsCache.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    renderDashboard();
+  }, (err) => {
+    console.error("Error fetching registrations:", err);
+    showToast("Error loading registrants data.", "error");
+  });
+}
+
+// 6. UI Rendering & Metrics Calculation
+function renderDashboard() {
+  // Compute Metrics
+  const totalReg = registrationsCache.length;
+  const totalEligible = registrationsCache.filter((r) => r.eligible).length;
+  const totalSubmitted = registrationsCache.filter((r) => r.accountDetailsSubmitted).length;
+
+  if (totalRegisteredEl) totalRegisteredEl.textContent = totalReg;
+  if (totalEligibleEl) totalEligibleEl.textContent = totalEligible;
+  if (totalSubmittedAccountEl) totalSubmittedAccountEl.textContent = totalSubmitted;
+
+  // Filter Table Data
+  let filtered = registrationsCache.filter((item) => {
+    if (currentFilter === "eligible" && !item.eligible) return false;
+    if (currentFilter === "submitted" && !item.accountDetailsSubmitted) return false;
+    if (currentFilter === "ineligible" && item.eligible) return false;
+
+    if (currentSearch) {
+      const q = currentSearch.toLowerCase();
+      const name = (item.fullName || "").toLowerCase();
+      const matric = (item.matricNumber || "").toLowerCase();
+      const email = (item.email || "").toLowerCase();
+      const phone = (item.phone || "").toLowerCase();
+      return name.includes(q) || matric.includes(q) || email.includes(q) || phone.includes(q);
+    }
+    return true;
+  });
+
+  renderTable(filtered);
+}
+
+function renderTable(data) {
+  if (!registrantsTableBody) return;
+  registrantsTableBody.innerHTML = "";
+
+  if (data.length === 0) {
+    registrantsTableBody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--text-muted, #888); padding: 2rem;">
+          No registrants found matching criteria.
+        </td>
+      </tr>`;
     return;
   }
 
-  const opening = toDate(schedule.openingDate);
-  const closing = toDate(schedule.closingDate);
-  const count = schedule.registeredCount || 0;
-  const max = schedule.maxRegistrants || 0;
+  data.forEach((item) => {
+    const tr = document.createElement("tr");
+    const accountInfo = accountDetailsCache.get(item.matricNumber);
 
-  let derivedStatus = schedule.status === "closed" ? "Closed" : "Open";
-  if (schedule.status !== "closed") {
-    const now = new Date();
-    if (opening && now < opening) derivedStatus = "Starting soon";
-    else if (closing && now > closing) derivedStatus = "Closed (schedule ended)";
-    else if (count >= max && max > 0) derivedStatus = "Full";
-  }
+    const bankDetailsHtml = accountInfo
+      ? `<div style="font-size: 0.85rem;">
+           <strong>${escapeHtml(accountInfo.bankName || "N/A")}</strong><br/>
+           <code>${escapeHtml(accountInfo.accountNumber || "")}</code><br/>
+           <span style="color: #666;">${escapeHtml(accountInfo.accountName || "")}</span>
+         </div>`
+      : `<span style="color: #aaa; font-style: italic;">Not Submitted</span>`;
 
-  if (statusEl) statusEl.textContent = derivedStatus;
-  if (openingEl) openingEl.textContent = opening ? opening.toLocaleString() : "Not set";
-  if (closingEl) closingEl.textContent = closing ? closing.toLocaleString() : "Not set";
-  if (capacityEl) capacityEl.textContent = max || "Not set";
-  if (registeredEl) registeredEl.textContent = count;
-  if (remainingEl) remainingEl.textContent = max ? Math.max(max - count, 0) : "—";
+    const statusBadge = item.eligible
+      ? `<span class="badge badge-success">Eligible</span>`
+      : `<span class="badge badge-danger">Ineligible</span>`;
 
-  if (!scheduleFormPopulated) {
-    const maxEl = document.getElementById("maxRegistrants");
-    const openEl = document.getElementById("openingDate");
-    const closeEl = document.getElementById("closingDate");
+    tr.innerHTML = `
+      <td><strong>${escapeHtml(item.fullName || "N/A")}</strong></td>
+      <td><code>${escapeHtml(item.matricNumber || "N/A")}</code></td>
+      <td>${escapeHtml(item.email || "N/A")}<br/><small>${escapeHtml(item.phone || "")}</small></td>
+      <td>${escapeHtml(item.level || "N/A")}</td>
+      <td>${statusBadge}</td>
+      <td>${bankDetailsHtml}</td>
+      <td>
+        <button class="btn-action toggle-eligibility-btn" data-matric="${item.matricNumber}" data-eligible="${item.eligible}">
+          ${item.eligible ? "Mark Ineligible" : "Mark Eligible"}
+        </button>
+        <button class="btn-action btn-danger delete-btn" data-matric="${item.matricNumber}">
+          Delete
+        </button>
+      </td>
+    `;
+    registrantsTableBody.appendChild(tr);
+  });
 
-    if (maxEl) maxEl.value = max || "";
-    if (openEl) openEl.value = toLocalInputValue(opening);
-    if (closeEl) closeEl.value = toLocalInputValue(closing);
-    scheduleFormPopulated = true;
-  }
+  attachTableActionListeners();
 }
 
-function wireScheduleForm() {
-  const form = document.getElementById("scheduleForm");
-  const message = document.getElementById("scheduleMessage");
-  const saveBtn = document.getElementById("saveScheduleBtn");
-  const openBtn = document.getElementById("openBtn");
-  const closeBtn = document.getElementById("closeBtn");
-
-  if (!form) return;
-
-  function showMessage(text, type) {
-    if (!message) return;
-    message.textContent = text;
-    message.className = `form-message is-visible is-${type}`;
-  }
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const max = parseInt(document.getElementById("maxRegistrants").value, 10);
-    const openingVal = document.getElementById("openingDate").value;
-    const closingVal = document.getElementById("closingDate").value;
-
-    if (!max || max < 1) return showMessage("Enter a valid maximum registrant count.", "error");
-    if (!openingVal || !closingVal) return showMessage("Set both opening and closing dates.", "error");
-
-    const opening = new Date(openingVal);
-    const closing = new Date(closingVal);
-    if (closing <= opening) return showMessage("Closing date must be after the opening date.", "error");
-
-    saveBtn.disabled = true;
-    saveBtn.classList.add("is-loading");
-    try {
-      await updateDoc(doc(db, "giveawaySettings", "schedule"), {
-        maxRegistrants: max,
-        openingDate: Timestamp.fromDate(opening),
-        closingDate: Timestamp.fromDate(closing),
-        status: "scheduled"
-      });
-      showMessage("Schedule saved.", "info");
-    } catch (err) {
-      showMessage("Could not save schedule. Please try again.", "error");
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.classList.remove("is-loading");
-    }
+function attachTableActionListeners() {
+  document.querySelectorAll(".toggle-eligibility-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const matric = btn.getAttribute("data-matric");
+      const currentStatus = btn.getAttribute("data-eligible") === "true";
+      try {
+        await updateDoc(doc(db, "registrations", matric), {
+          eligible: !currentStatus,
+        });
+        showToast(`Eligibility updated for ${matric}`, "success");
+      } catch (err) {
+        console.error("Error toggling eligibility:", err);
+        showToast("Could not update eligibility.", "error");
+      }
+    });
   });
 
-  openBtn?.addEventListener("click", async () => {
-    try {
-      await updateDoc(doc(db, "giveawaySettings", "schedule"), { status: "open" });
-      showMessage("Giveaway marked open.", "info");
-    } catch (err) {
-      showMessage("Could not update status.", "error");
-    }
+  document.querySelectorAll(".delete-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const matric = btn.getAttribute("data-matric");
+      if (confirm(`Are you sure you want to delete registration for ${matric}?`)) {
+        try {
+          await deleteDoc(doc(db, "registrations", matric));
+          await deleteDoc(doc(db, "accountDetails", matric));
+          showToast(`Deleted ${matric} successfully.`, "success");
+        } catch (err) {
+          console.error("Error deleting document:", err);
+          showToast("Failed to delete record.", "error");
+        }
+      }
+    });
   });
-
-  closeBtn?.addEventListener("click", async () => {
-    try {
-      await updateDoc(doc(db, "giveawaySettings", "schedule"), { status: "closed" });
-      showMessage("Giveaway marked closed.", "info");
-    } catch (err) {
-      showMessage("Could not update status.", "error");
-    }
-  });
-}
-
-// ---------------- Table: search, filter, render ----------------
-
-let filters = { search: "", level: "", status: "", account: "" };
-
-function wireFilters() {
-  document.getElementById("searchInput")?.addEventListener("input", (e) => {
-    filters.search = e.target.value.trim().toLowerCase();
-    renderTable();
-  });
-  document.getElementById("levelFilter")?.addEventListener("change", (e) => {
-    filters.level = e.target.value;
-    renderTable();
-  });
-  document.getElementById("statusFilter")?.addEventListener("change", (e) => {
-    filters.status = e.target.value;
-    renderTable();
-  });
-  document.getElementById("accountFilter")?.addEventListener("change", (e) => {
-    filters.account = e.target.value;
-    renderTable();
-  });
-}
-
-function getFiltered() {
-  return registrations.filter((r) => {
-    if (filters.search) {
-      const haystack = `${r.fullName || ""} ${r.matricNumber || ""}`.toLowerCase();
-      if (!haystack.includes(filters.search)) return false;
-    }
-    if (filters.level && r.level !== filters.level) return false;
-    if (filters.status && r.status !== filters.status) return false;
-    if (filters.account === "submitted" && !r.accountDetailsSubmitted) return false;
-    if (filters.account === "notSubmitted" && r.accountDetailsSubmitted) return false;
-    return true;
-  });
-}
-
-function statusBadge(status) {
-  const map = {
-    registered: ["badge-registered", "Registered"],
-    eligible: ["badge-eligible", "Eligible"],
-    notEligible: ["badge-notEligible", "Not eligible"],
-    processed: ["badge-processed", "Processed"],
-  };
-  const [cls, label] = map[status] || ["badge-registered", status || "—"];
-  return `<span class="badge ${cls}">${label}</span>`;
-}
-
-function accountBadge(submitted) {
-  return submitted
-    ? `<span class="badge badge-yes">Submitted</span>`
-    : `<span class="badge badge-no">Not submitted</span>`;
-}
-
-function formatDate(ts) {
-  const d = toDate(ts);
-  return d ? d.toLocaleDateString() : "—";
 }
 
 function escapeHtml(str) {
-  return String(str ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function renderTable() {
-  const list = getFiltered();
-  const tbody = document.getElementById("regTableBody");
-  const cardsWrap = document.getElementById("regCards");
-  const emptyState = document.getElementById("tableEmptyState");
-
-  if (emptyState) emptyState.hidden = list.length > 0;
-
-  if (tbody) {
-    tbody.innerHTML = list
-      .map(
-        (r) => `
-      <tr>
-        <td>${escapeHtml(r.fullName)}</td>
-        <td class="mono">${escapeHtml(r.matricNumber)}</td>
-        <td>${escapeHtml(r.email)}</td>
-        <td>${escapeHtml(r.phone)}</td>
-        <td>${escapeHtml(r.level)}</td>
-        <td>${statusBadge(r.status)}</td>
-        <td>${r.eligible ? '<span class="badge badge-yes">Eligible</span>' : '<span class="badge badge-no">Pending</span>'}</td>
-        <td>${accountBadge(r.accountDetailsSubmitted)}</td>
-        <td>${formatDate(r.registeredAt)}</td>
-        <td><button class="link-btn" data-view="${escapeHtml(r.id)}">View</button></td>
-      </tr>`
-      )
-      .join("");
-    
-    tbody.querySelectorAll("[data-view]").forEach((btn) =>
-      btn.addEventListener("click", () => openDetailModal(btn.dataset.view))
-    );
-  }
-
-  if (cardsWrap) {
-    cardsWrap.innerHTML = list
-      .map(
-        (r) => `
-      <div class="reg-card">
-        <h4>${escapeHtml(r.fullName)}</h4>
-        <div class="mono">${escapeHtml(r.matricNumber)}</div>
-        <div class="reg-card-row"><span>${escapeHtml(r.level)}</span><span>${formatDate(r.registeredAt)}</span></div>
-        <div class="reg-card-badges">
-          ${statusBadge(r.status)}
-          ${r.eligible ? '<span class="badge badge-yes">Eligible</span>' : '<span class="badge badge-no">Pending</span>'}
-          ${accountBadge(r.accountDetailsSubmitted)}
-        </div>
-        <div class="reg-card-row"><button class="link-btn" data-view="${escapeHtml(r.id)}">View details</button></div>
-      </div>`
-      )
-      .join("");
-
-    cardsWrap.querySelectorAll("[data-view]").forEach((btn) =>
-      btn.addEventListener("click", () => openDetailModal(btn.dataset.view))
-    );
-  }
-}
-
-// ---------------- Detail modal ----------------
-
-let currentModalId = null;
-
-function wireModal() {
-  document.getElementById("closeDetailModal")?.addEventListener("click", closeDetailModal);
-  document.getElementById("detailModal")?.addEventListener("click", (e) => {
-    if (e.target.id === "detailModal") closeDetailModal();
+// 7. Search & Filter Handlers
+if (searchInput) {
+  searchInput.addEventListener("input", (e) => {
+    currentSearch = e.target.value.trim();
+    renderDashboard();
   });
-  document.getElementById("markEligibleBtn")?.addEventListener("click", () => updateStatus("eligible", true));
-  document.getElementById("markNotEligibleBtn")?.addEventListener("click", () => updateStatus("notEligible", false));
-  document.getElementById("markProcessedBtn")?.addEventListener("click", () => updateStatus("processed", true));
 }
 
-async function openDetailModal(id) {
-  const r = registrations.find((x) => x.id === id);
-  if (!r) return;
-  currentModalId = id;
+filterPills.forEach((pill) => {
+  pill.addEventListener("click", () => {
+    filterPills.forEach((p) => p.classList.remove("active"));
+    pill.classList.add("active");
+    currentFilter = pill.getAttribute("data-filter") || "all";
+    renderDashboard();
+  });
+});
 
-  let accountFields = "";
-  try {
-    const accSnap = await getDoc(doc(db, "accountDetails", id));
-    if (accSnap.exists()) {
-      const a = accSnap.data();
-      accountFields = `
-        <div><dt>Bank name</dt><dd>${escapeHtml(a.bankName)}</dd></div>
-        <div><dt>Account name</dt><dd>${escapeHtml(a.accountName)}</dd></div>
-        <div><dt>Account number</dt><dd class="mono">${escapeHtml(a.accountNumber)}</dd></div>`;
+// 8. CSV Export
+if (exportCsvBtn) {
+  exportCsvBtn.addEventListener("click", () => {
+    if (registrationsCache.length === 0) {
+      return showToast("No registration data available to export.", "error");
     }
-  } catch (err) {
-    // Admin reads should succeed under security rules
-  }
 
-  const titleEl = document.getElementById("detailModalTitle");
-  const listEl = document.getElementById("detailList");
-  const modalEl = document.getElementById("detailModal");
+    const headers = [
+      "Full Name",
+      "Matric Number",
+      "Email",
+      "Phone",
+      "Level",
+      "Eligible",
+      "Account Submitted",
+      "Bank Name",
+      "Account Number",
+      "Account Name",
+    ];
 
-  if (titleEl) titleEl.textContent = r.fullName || "Student details";
-  if (listEl) {
-    listEl.innerHTML = `
-      <div><dt>Full name</dt><dd>${escapeHtml(r.fullName)}</dd></div>
-      <div><dt>Matric number</dt><dd>${escapeHtml(r.matricNumber)}</dd></div>
-      <div><dt>Email</dt><dd>${escapeHtml(r.email)}</dd></div>
-      <div><dt>Phone</dt><dd>${escapeHtml(r.phone)}</dd></div>
-      <div><dt>Department</dt><dd>${escapeHtml(r.department)}</dd></div>
-      <div><dt>Level</dt><dd>${escapeHtml(r.level)}</dd></div>
-      <div><dt>Registered</dt><dd>${formatDate(r.registeredAt)}</dd></div>
-      <div><dt>Status</dt><dd>${r.status || "—"}</dd></div>
-      ${accountFields}
-    `;
-  }
-  if (modalEl) modalEl.hidden = false;
-}
+    const rows = registrationsCache.map((item) => {
+      const acc = accountDetailsCache.get(item.matricNumber) || {};
+      return [
+        `"${item.fullName || ""}"`,
+        `"${item.matricNumber || ""}"`,
+        `"${item.email || ""}"`,
+        `"${item.phone || ""}"`,
+        `"${item.level || ""}"`,
+        item.eligible ? "YES" : "NO",
+        item.accountDetailsSubmitted ? "YES" : "NO",
+        `"${acc.bankName || ""}"`,
+        `"${acc.accountNumber || ""}"`,
+        `"${acc.accountName || ""}"`,
+      ].join(",");
+    });
 
-function closeDetailModal() {
-  const modalEl = document.getElementById("detailModal");
-  if (modalEl) modalEl.hidden = true;
-  currentModalId = null;
-}
-
-async function updateStatus(status, eligible) {
-  if (!currentModalId) return;
-  try {
-    await updateDoc(doc(db, "registrations", currentModalId), { status, eligible });
-    closeDetailModal();
-  } catch (err) {
-    alert("Could not update this student's status. Please try again.");
-  }
-}
-
-// ---------------- CSV export ----------------
-
-function toCsv(rows, columns) {
-  const escapeCell = (val) => {
-    const s = String(val ?? "");
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const header = columns.map((c) => c.label).join(",");
-  const body = rows.map((row) => columns.map((c) => escapeCell(c.value(row))).join(",")).join("\n");
-  return header + "\n" + body;
-}
-
-function downloadCsv(filename, csvText) {
-  const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function wireExports() {
-  document.getElementById("exportRegistrationsBtn")?.addEventListener("click", () => {
-    const csv = toCsv(registrations, [
-      { label: "Full Name", value: (r) => r.fullName },
-      { label: "Matric Number", value: (r) => r.matricNumber },
-      { label: "Email", value: (r) => r.email },
-      { label: "Phone", value: (r) => r.phone },
-      { label: "Level", value: (r) => r.level },
-      { label: "Status", value: (r) => r.status },
-      { label: "Eligible", value: (r) => (r.eligible ? "Yes" : "No") },
-      { label: "Account Details Submitted", value: (r) => (r.accountDetailsSubmitted ? "Yes" : "No") },
-      { label: "Registered At", value: (r) => formatDate(r.registeredAt) },
-    ]);
-    downloadCsv("registrations.csv", csv);
-  });
-
-  document.getElementById("exportAccountsBtn")?.addEventListener("click", async () => {
-    try {
-      const snap = await getDocs(collection(db, "accountDetails"));
-      const rows = snap.docs.map((d) => ({ matricNumber: d.id, ...d.data() }));
-      const csv = toCsv(rows, [
-        { label: "Matric Number", value: (r) => r.matricNumber },
-        { label: "Bank Name", value: (r) => r.bankName },
-        { label: "Account Name", value: (r) => r.accountName },
-        { label: "Account Number", value: (r) => r.accountNumber },
-        { label: "Submitted At", value: (r) => formatDate(r.submittedAt) },
-      ]);
-      downloadCsv("account-details.csv", csv);
-    } catch (err) {
-      alert("Could not export account details. Please try again.");
-    }
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `giveaway_registrations_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   });
 }
+
+// 9. Startup Initialization
+document.addEventListener("DOMContentLoaded", () => {
+  loadScheduleSettings();
+  initRealtimeListeners();
+});
