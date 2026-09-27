@@ -30,17 +30,21 @@ onAuthStateChanged(auth, async (user) => {
       window.location.href = "admin.html";
       return;
     }
-    const adminEmailEl = document.getElementById("adminEmail");
+        const adminEmailEl = document.getElementById("adminEmail");
     if (adminEmailEl) adminEmailEl.textContent = user.email;
-    if (authGate) authGate.hidden = true;
-    if (dashboard) dashboard.hidden = false;
+    
+    // 1. Force the loading screen to completely disappear
+    if (authGate) authGate.style.display = "none";
+    
+    // 2. Reveal the dashboard
+    if (dashboard) dashboard.hidden = false; 
+    
     initDashboard();
   } catch (err) {
     if (authGate) {
       authGate.textContent = "Could not verify admin access. Please sign in again.";
     }
   }
-});
 
 const signOutBtn = document.getElementById("signOutBtn");
 if (signOutBtn) {
