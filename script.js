@@ -380,3 +380,20 @@ const closeModalBtn = document.getElementById("closeModalBtn");
     });
   }
 })();
+// Success Modal Display Helper
+function showSuccessModal(name, matric, level) {
+  const modal = document.getElementById("successModal");
+  const summaryName = document.getElementById("summaryName");
+  const summaryMatric = document.getElementById("summaryMatric");
+  const summaryLevel = document.getElementById("summaryLevel");
+
+  if (summaryName) summaryName.textContent = name;
+  if (summaryMatric) summaryMatric.textContent = matric;
+  if (summaryLevel) summaryLevel.textContent = level;
+
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.removeAttribute("hidden");
+  }
+}
+
